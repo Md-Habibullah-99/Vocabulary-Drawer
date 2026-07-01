@@ -115,7 +115,7 @@ export default function Sidebar({
   return (
     <nav
       aria-label="Flashcard categories"
-      className="w-full md:w-72 flex-shrink-0 border-r border-rule bg-paper md:h-full overflow-y-auto"
+      className="w-full md:w-72 flex-shrink-0 border-r border-rule bg-paper md:h-full overflow-y-auto fixed"
     >
       <div className="px-4 py-4 flex items-center gap-2 border-b border-rule">
         <Library size={18} className="text-accent" strokeWidth={2.2} />
