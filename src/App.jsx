@@ -277,13 +277,15 @@ export default function App() {
           <Route
             path="/add-words"
             element={
-              <ImportPanel
-                formatProfiles={formatProfiles}
-                onSaveFormatProfile={saveFormatProfile}
-                onDeleteFormatProfile={deleteFormatProfile}
-                onImport={(newCards) => handleIncomingCards(newCards, "import")}
-                onCancel={hasExistingCards ? () => navigate("/") : null}
-              />
+              <div className="flex-1 min-h-0 overflow-y-auto">
+                <ImportPanel
+                  formatProfiles={formatProfiles}
+                  onSaveFormatProfile={saveFormatProfile}
+                  onDeleteFormatProfile={deleteFormatProfile}
+                  onImport={(newCards) => handleIncomingCards(newCards, "import")}
+                  onCancel={hasExistingCards ? () => navigate("/") : null}
+                />
+              </div>
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />
