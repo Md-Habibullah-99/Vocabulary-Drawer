@@ -41,7 +41,7 @@ import { UNREAD_TAG_ID } from "./categoryTree.js";
 let counter = 0;
 function nextId() {
   counter += 1;
-  return `restored-${Date.now()}-${counter}`;
+  return `${counter}`;
 }
 
 /** Maps a list of human tag labels back to tag ids, using the current tag list. Unknown labels are dropped. "Unread" is always dropped (it's derived, never stored). */

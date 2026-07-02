@@ -1,24 +1,39 @@
 /**
  * App.jsx
  * --------
- * Top-level layout and state wiring. Deliberately thin: all persistence
- * and marking logic lives in hooks/useFlashcards.js, all category/tag
- * filtering logic lives in utils/categoryTree.js, and all deck-position
- * logic lives in hooks/useDeckNavigation.js. This file's only job is to
- * connect those pieces to the visual components, plus the global
- * keyboard shortcuts (Space to flip, arrows to navigate).
+ * Top-level layout, routing, and state wiring. Deliberately thin: all
+ * persistence and marking logic lives in hooks/useFlashcards.js, all
+ * category/tag filtering logic lives in utils/categoryTree.js, and all
+ * deck-position logic lives in hooks/useDeckNavigation.js. This file's
+ * job is to connect those pieces to the visual components and routes,
+ * plus the global keyboard shortcuts (Space to flip, arrows to
+ * navigate).
  *
- * View states:
- *  1. Import view — shown when there are no cards yet, or via "Add words".
- *  2. Study view — sidebar (categories/tags) + active flashcard + controls.
+ * ROUTES
+ * -------
+ *  "/"          — Home: Sidebar + Flashcard + DeckControls. Redirects
+ *                 to "/add-words" if there are no cards yet (nothing
+ *                 to show).
+ *  "/add-words" — ImportPanel, with a "Back to flashcards" button so
+ *                 a learner who opened it by mistake (or just changed
+ *                 their mind) can always get back to "/" without
+ *                 getting stuck — see ImportPanel's onCancel prop.
+ *
+ * DuplicateReviewPanel and SettingsPanel are NOT routes: they're
+ * transient overlays that can appear regardless of which route is
+ * active (a duplicate check can be triggered from either ImportPanel
+ * or a Settings backup-restore), so they're rendered as siblings of
+ * <Routes> rather than as routes themselves. While DuplicateReviewPanel
+ * is showing, the routed content underneath is hidden (not unmounted)
+ * so an in-progress ImportPanel form isn't lost if the learner cancels
+ * the review.
  */
 
 import React, { useState, useMemo, useEffect } from "react";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { Menu, Settings as SettingsIcon, Plus } from "lucide-react";
 
-import Sidebar from "./components/Sidebar";
-import Flashcard from "./components/Flashcard";
-import DeckControls from "./components/DeckControls";
+import HomeView from "./components/HomeView";
 import SettingsPanel from "./components/SettingsPanel";
 import ImportPanel from "./components/ImportPanel";
 import DuplicateReviewPanel from "./components/DuplicateReviewPanel";
@@ -57,10 +72,14 @@ export default function App() {
     clearHistory,
   } = useFlashcards();
 
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isAddWordsRoute = location.pathname === "/add-words";
+  const isHomeRoute = location.pathname === "/";
+
   const [activeCategory, setActiveCategory] = useState(ALL_WORDS_CATEGORY);
   const [activeTag, setActiveTag] = useState("all");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Set whenever a parsed/restored batch has one or more duplicates
@@ -68,9 +87,17 @@ export default function App() {
   // mode is 'import' (came from ImportPanel, uses addCards/importCards
   // on confirm) or 'restore' (came from a Settings backup upload, uses
   // restoreCards on confirm so tags get re-created too). While this is
-  // set, DuplicateReviewPanel replaces whatever view would otherwise be
-  // showing, so the learner resolves duplicates before anything commits.
+  // set, DuplicateReviewPanel replaces whatever route would otherwise
+  // be showing, so the learner resolves duplicates before anything
+  // commits.
   const [pendingImport, setPendingImport] = useState(null);
+  const showDuplicateReview = !!pendingImport;
+
+  useEffect(() => {
+    if (!isHomeRoute || showDuplicateReview) {
+      setIsSidebarOpen(false);
+    }
+  }, [isHomeRoute, showDuplicateReview]);
 
   const categories = useMemo(() => getCategoryList(cards), [cards]);
 
@@ -113,14 +140,6 @@ export default function App() {
   const getCounts = (category) => getTagCounts(cards, category, tags);
 
   const hasExistingCards = cards.length > 0;
-  const showImportView = (!hasExistingCards || isImporting) && !pendingImport;
-  const showDuplicateReview = !!pendingImport;
-
-  useEffect(() => {
-    if (showImportView || showDuplicateReview) {
-      setIsSidebarOpen(false);
-    }
-  }, [showImportView, showDuplicateReview]);
 
   /**
    * Entry point for BOTH the ImportPanel ("Add words" / first import)
@@ -141,7 +160,7 @@ export default function App() {
     setPendingImport({ cards: newCards, duplicates, unique, mode });
   };
 
-  /** Actually writes a batch of cards to state, via the right path for the mode. */
+  /** Actually writes a batch of cards to state, via the right path for the mode, then returns the learner to their flashcards. */
   const commitCards = (cardsToCommit, mode) => {
     if (mode === "restore") {
       restoreCards(cardsToCommit);
@@ -152,7 +171,7 @@ export default function App() {
     }
     setActiveCategory(ALL_WORDS_CATEGORY);
     setActiveTag("all");
-    setIsImporting(false);
+    navigate("/");
   };
 
   const handleConfirmDuplicateReview = (skipIds) => {
@@ -173,7 +192,7 @@ export default function App() {
     onFlip: toggleReveal,
     onNext: goNext,
     onPrevious: goPrevious,
-    enabled: !showImportView && !showDuplicateReview && !isSettingsOpen,
+    enabled: !isAddWordsRoute && !showDuplicateReview && !isSettingsOpen,
   });
 
   return (
@@ -181,7 +200,7 @@ export default function App() {
       {/* Top bar */}
       <header className="flex items-center justify-between px-5 py-3 border-b border-rule bg-paper">
         <div className="flex items-center gap-2">
-          {!showImportView && !showDuplicateReview && (
+          {isHomeRoute && !showDuplicateReview && (
             <button
               type="button"
               onClick={() => setIsSidebarOpen(true)}
@@ -196,10 +215,10 @@ export default function App() {
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {!showImportView && !showDuplicateReview && (
+          {!isAddWordsRoute && !showDuplicateReview && (
             <button
               type="button"
-              onClick={() => setIsImporting(true)}
+              onClick={() => navigate("/add-words")}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-rule text-ink/70 text-sm hover:border-ink/40 transition-colors"
             >
               <Plus size={15} />
@@ -217,6 +236,60 @@ export default function App() {
         </div>
       </header>
 
+      {/* Routed content stays MOUNTED (just hidden) while duplicate
+          review is showing on top of it, rather than being unmounted —
+          otherwise cancelling the review would wipe whatever text/format
+          the learner had set up in the ImportPanel form, forcing them to
+          redo it. */}
+      <div className={`flex flex-1 min-h-0 flex-col ${showDuplicateReview ? "hidden" : ""}`}>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              hasExistingCards ? (
+                <HomeView
+                  isSidebarOpen={isSidebarOpen}
+                  onRequestCloseSidebar={() => setIsSidebarOpen(false)}
+                  categories={categories}
+                  activeCategory={activeCategory}
+                  activeTag={activeTag}
+                  onSelectCategory={handleSelectCategory}
+                  getCounts={getCounts}
+                  tags={tags}
+                  onMergeCategory={mergeCategory}
+                  onAddTag={addCustomTag}
+                  onRenameTag={renameTag}
+                  onDeleteTag={deleteCustomTag}
+                  currentCard={currentCard}
+                  isRevealed={isRevealed}
+                  onToggleReveal={toggleReveal}
+                  onToggleTag={handleToggleTag}
+                  currentIndex={currentIndex}
+                  deckLength={deckLength}
+                  onPrevious={goPrevious}
+                  onNext={goNext}
+                />
+              ) : (
+                <Navigate to="/add-words" replace />
+              )
+            }
+          />
+          <Route
+            path="/add-words"
+            element={
+              <ImportPanel
+                formatProfiles={formatProfiles}
+                onSaveFormatProfile={saveFormatProfile}
+                onDeleteFormatProfile={deleteFormatProfile}
+                onImport={(newCards) => handleIncomingCards(newCards, "import")}
+                onCancel={hasExistingCards ? () => navigate("/") : null}
+              />
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+
       {showDuplicateReview && (
         <main className="flex-1">
           <DuplicateReviewPanel
@@ -228,72 +301,6 @@ export default function App() {
         </main>
       )}
 
-      {/* ImportPanel stays MOUNTED (just hidden) while duplicate review is
-          showing on top of it for an 'import'-mode batch, rather than
-          being unmounted — otherwise cancelling the review would wipe
-          whatever text/format the learner had set up in the import
-          form, forcing them to redo it. A 'restore'-mode duplicate
-          review has no form underneath it to preserve, so ImportPanel
-          simply isn't rendered in that case. */}
-      {(showImportView || (showDuplicateReview && pendingImport.mode === "import")) && (
-        <main className={`flex-1 ${showDuplicateReview ? "hidden" : ""}`}>
-          <ImportPanel
-            formatProfiles={formatProfiles}
-            onSaveFormatProfile={saveFormatProfile}
-            onDeleteFormatProfile={deleteFormatProfile}
-            onImport={(newCards) => handleIncomingCards(newCards, "import")}
-          />
-        </main>
-      )}
-
-      {!showImportView && !showDuplicateReview && (
-        <div className="flex flex-1 min-h-0 flex-col md:flex-row md:overflow-hidden">
-          {isSidebarOpen && (
-            <button
-              type="button"
-              aria-label="Close sidebar overlay"
-              onClick={() => setIsSidebarOpen(false)}
-              className="fixed inset-0 z-30 bg-ink/25 backdrop-blur-[1px] md:hidden"
-            />
-          )}
-          <Sidebar
-            categories={categories}
-            activeCategory={activeCategory}
-            activeTag={activeTag}
-            onSelect={handleSelectCategory}
-            getCounts={getCounts}
-            tags={tags}
-            onMergeCategory={mergeCategory}
-            onAddTag={addCustomTag}
-            onRenameTag={renameTag}
-            onDeleteTag={deleteCustomTag}
-            isMobileOpen={isSidebarOpen}
-            onRequestClose={() => setIsSidebarOpen(false)}
-          />
-
-          <main className="flex-1 min-h-0 flex items-center justify-center px-6 py-10 md:overflow-hidden">
-            <div className="w-full max-w-md">
-              <Flashcard
-                card={currentCard}
-                tags={tags}
-                isRevealed={isRevealed}
-                onToggleReveal={toggleReveal}
-                onToggleTag={handleToggleTag}
-              />
-              <DeckControls
-                currentIndex={currentIndex}
-                deckLength={deckLength}
-                onPrevious={goPrevious}
-                onNext={goNext}
-              />
-              <p className="text-center font-mono text-[11px] text-ink/30 mt-3">
-                Space to flip &middot; ← → to navigate
-              </p>
-            </div>
-          </main>
-        </div>
-      )}
-
       <SettingsPanel
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -302,7 +309,7 @@ export default function App() {
         onResetData={() => {
           resetAll();
           setIsSettingsOpen(false);
-          setIsImporting(true);
+          navigate("/add-words");
         }}
         cards={cards}
         categories={categories}

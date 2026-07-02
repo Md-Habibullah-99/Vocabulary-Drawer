@@ -26,11 +26,12 @@
  */
 
 import React, { useState, useRef, useMemo } from "react";
-import { Upload, FileText, ChevronDown, Save, Trash2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Upload, FileText, ChevronDown, Save, Trash2, CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react";
 import { parseWithProfile, PRESETS } from "../utils/formatProfiles";
 import { readTextFile, extractPdfText, readJsonFile, getFileExtension } from "../utils/fileImport";
 import { SEPARATOR_OPTIONS, buildEasyProfile, describeEasyProfile } from "../utils/easyFormatBuilder";
 import RegexHighlightPreview from "./RegexHighlightPreview";
+import FormatBuilder from "./FormatBuilder";
 
 const PRESET_PLACEHOLDERS = {
   numbered: `BASIC TURKISH NOUNS AND ADJECTIVES
@@ -95,16 +96,32 @@ export default function ImportPanel({
   formatProfiles = [],
   onSaveFormatProfile,
   onDeleteFormatProfile,
+  onCancel,
 }) {
   const [text, setText] = useState("");
   const [error, setError] = useState(null);
-  const [formatMode, setFormatMode] = useState("easy"); // 'easy' | 'preset' | 'regex'
+  const [formatMode, setFormatMode] = useState("easy"); // 'easy' | 'preset' | 'regex' | 'builder'
   const [preset, setPreset] = useState("numbered");
   const [regexPattern, setRegexPattern] = useState("");
   const [regexFlags, setRegexFlags] = useState("m");
   const [showFormatPanel, setShowFormatPanel] = useState(true);
   const [saveProfileName, setSaveProfileName] = useState("");
   const fileInputRef = useRef(null);
+
+  // State produced by the Drag & Drop builder (Requirement 2). Kept
+  // separate from regexPattern/regexFlags so switching to "builder"
+  // mode never clobbers whatever the learner had typed in "Advanced".
+  const [builderPattern, setBuilderPattern] = useState("");
+  const [builderFlags, setBuilderFlags] = useState("gm");
+  const [builderDescription, setBuilderDescription] = useState("");
+  const [builderUsable, setBuilderUsable] = useState(false);
+
+  const handleBuilderChange = (pattern, flags, description, usable) => {
+    setBuilderPattern(pattern);
+    setBuilderFlags(flags);
+    setBuilderDescription(description);
+    setBuilderUsable(usable);
+  };
 
   // Easy-builder answers
   const [wordSeparatorId, setWordSeparatorId] = useState("space");
@@ -134,8 +151,12 @@ export default function ImportPanel({
     if (formatMode === "regex") {
       return { mode: "regex", pattern: regexPattern, flags: regexFlags };
     }
+    if (formatMode === "builder") {
+      if (!builderUsable) return null; // needs at least [word] and [meaning] chips placed
+      return { mode: "regex", pattern: builderPattern, flags: builderFlags };
+    }
     return { mode: "preset", preset };
-  }, [formatMode, easyAnswers, regexPattern, regexFlags, preset]);
+  }, [formatMode, easyAnswers, regexPattern, regexFlags, preset, builderPattern, builderFlags, builderUsable]);
 
   // Live preview: try parsing just the textarea's content (or, if it's
   // empty, the relevant placeholder) so the learner can see whether
@@ -146,6 +167,8 @@ export default function ImportPanel({
     ? EASY_PLACEHOLDER
     : formatMode === "preset"
     ? PRESET_PLACEHOLDERS[preset]
+    : formatMode === "builder"
+    ? EASY_PLACEHOLDER
     : "";
 
   const preview = useMemo(() => {
@@ -239,10 +262,23 @@ export default function ImportPanel({
       ? "Advanced (custom regex)"
       : formatMode === "preset"
       ? PRESETS.find((p) => p.id === preset)?.label
+      : formatMode === "builder"
+      ? builderDescription || "Drag & Drop builder (not set up yet)"
       : describeEasyProfile(easyAnswers);
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
+      {onCancel && (
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex items-center gap-1.5 text-sm font-body text-ink/60 hover:text-accent transition-colors mb-4"
+        >
+          <ArrowLeft size={15} />
+          Back to flashcards
+        </button>
+      )}
+
       <div className="text-center mb-6">
         <h1 className="font-display font-semibold text-3xl text-ink">
           Build your word drawer
@@ -273,6 +309,7 @@ export default function ImportPanel({
             {[
               { id: "easy", label: "Easy (no regex)" },
               { id: "preset", label: "Preset" },
+              { id: "builder", label: "Drag & Drop" },
               { id: "regex", label: "Advanced" },
             ].map((m) => (
               <button
@@ -373,6 +410,11 @@ export default function ImportPanel({
                 </label>
               ))}
             </div>
+          )}
+
+          {/* ----- DRAG & DROP BUILDER MODE ----- */}
+          {formatMode === "builder" && (
+            <FormatBuilder onPatternChange={handleBuilderChange} />
           )}
 
           {/* ----- ADVANCED / REGEX MODE ----- */}
@@ -510,7 +552,7 @@ export default function ImportPanel({
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder={
-            formatMode === "easy"
+            formatMode === "easy" || formatMode === "builder"
               ? EASY_PLACEHOLDER
               : formatMode === "preset"
               ? PRESET_PLACEHOLDERS[preset]

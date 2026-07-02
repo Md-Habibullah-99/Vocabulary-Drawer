@@ -27,7 +27,7 @@ const GROUP_STYLES = {
   word: "bg-accent/20 text-accent border-b-2 border-accent",
   meaning: "bg-sage/20 text-sage border-b-2 border-sage",
   example: "bg-brass/20 text-brass border-b-2 border-brass",
-  exampleMeaning: "bg-ink/10 text-ink/70 border-b-2 border-ink/40",
+  exampleMeaning: "bg-teal/20 text-teal border-b-2 border-teal",
 };
 
 const GROUP_LABELS = {

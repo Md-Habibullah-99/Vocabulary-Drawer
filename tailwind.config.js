@@ -22,6 +22,10 @@ module.exports = {
         accent: "#B5482F",
         sage: "#5C7A5E",
         brass: "#9C7A3C",
+        // Added for the format-builder's 4th capture group ("meaning of
+        // example") — a muted ledger-ink teal that reads as clearly
+        // distinct from accent/sage/brass on the same paper tone.
+        teal: "#3E6B77",
       },
       fontFamily: {
         display: ["Fraunces", "ui-serif", "Georgia", "serif"],
