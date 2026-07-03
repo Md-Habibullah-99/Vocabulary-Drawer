@@ -30,6 +30,7 @@
  *  - history: [{cardId, word, meaning, category, viewedAt}], most recent first
  *  - onClearHistory: () => void
  *  - onRestoreBackup: (cards: Array) => void — called with parsed cards from an uploaded backup file
+ *  - onUpdateCard: (cardId, updates) => void — edits a single card's word/meaning/example fields (see WordManager.jsx)
  */
 
 import React, { useState, useRef } from "react";
@@ -43,7 +44,9 @@ import {
   Upload,
   History as HistoryIcon,
   AlertCircle,
+  Pencil,
 } from "lucide-react";
+import WordManager from "./WordManager";
 import {
   EXPORT_SCOPES,
   buildTextExport,
@@ -66,9 +69,11 @@ export default function SettingsPanel({
   history = [],
   onClearHistory,
   onRestoreBackup,
+  onUpdateCard,
 }) {
   const [exportScope, setExportScope] = useState(EXPORT_SCOPES.ALL);
   const [showHistory, setShowHistory] = useState(false);
+  const [showWordManager, setShowWordManager] = useState(false);
   const [restoreError, setRestoreError] = useState(null);
   const restoreFileInputRef = useRef(null);
 
@@ -298,6 +303,29 @@ export default function SettingsPanel({
                     </button>
                   </>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* ----- Word manager (edit words/meanings/examples in place) ----- */}
+          <div className="pt-5 border-t border-rule">
+            <button
+              type="button"
+              onClick={() => setShowWordManager((v) => !v)}
+              className="w-full flex items-center justify-between"
+            >
+              <span className="flex items-center gap-2">
+                <Pencil size={16} className="text-ink/50" />
+                <h3 className="font-body text-sm font-medium text-ink">
+                  Edit words ({cards.length})
+                </h3>
+              </span>
+              <span className="text-xs text-ink/40">{showWordManager ? "Hide" : "Show"}</span>
+            </button>
+
+            {showWordManager && (
+              <div className="mt-3">
+                <WordManager cards={cards} onUpdateCard={onUpdateCard} />
               </div>
             )}
           </div>

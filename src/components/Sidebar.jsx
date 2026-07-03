@@ -72,6 +72,55 @@ export default function Sidebar({
   const [renamingTagId, setRenamingTagId] = useState(null);
   const [renameTagValue, setRenameTagValue] = useState("");
 
+  // ---- Drag-and-drop category merging ---------------------------------
+  // Dragging category A onto category B asks "merge A into B?" via a
+  // confirmation modal rather than merging immediately on drop — a drop
+  // is easy to trigger by accident, and this action deletes a category.
+  const [draggingCategory, setDraggingCategory] = useState(null);
+  const [dragOverCategory, setDragOverCategory] = useState(null);
+  const [pendingDropMerge, setPendingDropMerge] = useState(null); // { from, to }
+
+  const handleDragStart = (e, category) => {
+    setDraggingCategory(category);
+    e.dataTransfer.effectAllowed = "move";
+    // Some browsers require data to be set for drag to register at all.
+    e.dataTransfer.setData("text/plain", category);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingCategory(null);
+    setDragOverCategory(null);
+  };
+
+  const handleDragOver = (e, category) => {
+    if (!draggingCategory || draggingCategory === category) return;
+    e.preventDefault(); // required to allow a drop
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverCategory !== category) setDragOverCategory(category);
+  };
+
+  const handleDragLeave = (category) => {
+    setDragOverCategory((prev) => (prev === category ? null : prev));
+  };
+
+  const handleDrop = (e, targetCategory) => {
+    e.preventDefault();
+    const source = draggingCategory;
+    setDraggingCategory(null);
+    setDragOverCategory(null);
+    if (!source || source === targetCategory) return;
+    setPendingDropMerge({ from: source, to: targetCategory });
+  };
+
+  const confirmDropMerge = () => {
+    if (pendingDropMerge) {
+      onMergeCategory(pendingDropMerge.from, pendingDropMerge.to);
+    }
+    setPendingDropMerge(null);
+  };
+
+  const cancelDropMerge = () => setPendingDropMerge(null);
+
   const toggleExpanded = (category) => {
     setExpanded((prev) => ({ ...prev, [category]: !prev[category] }));
   };
@@ -150,16 +199,34 @@ export default function Sidebar({
           const counts = getCounts(category);
           const isMergingThis = mergeTargetFor === category;
           const canManageCategory = category !== ALL_WORDS_CATEGORY;
+          // "All Words" is a pseudo-category (every card): it can't be
+          // dragged away (there's nothing to merge it into) and can't be
+          // a drop target either (mergeCategories already no-ops on it,
+          // but skipping drag-over here avoids a misleading highlight).
+          const isDraggable = canManageCategory;
+          const isDropTarget = canManageCategory;
+          const isBeingDragged = draggingCategory === category;
+          const isDragOverTarget = isDropTarget && dragOverCategory === category;
 
           return (
             <li key={category} className="px-2">
-              <div className="flex items-center gap-1">
+              <div
+                className={`flex items-center gap-1 rounded-sm transition-colors ${
+                  isDragOverTarget ? "bg-accent/10 ring-1 ring-accent/50" : ""
+                } ${isBeingDragged ? "opacity-40" : ""}`}
+                draggable={isDraggable}
+                onDragStart={isDraggable ? (e) => handleDragStart(e, category) : undefined}
+                onDragEnd={isDraggable ? handleDragEnd : undefined}
+                onDragOver={isDropTarget ? (e) => handleDragOver(e, category) : undefined}
+                onDragLeave={isDropTarget ? () => handleDragLeave(category) : undefined}
+                onDrop={isDropTarget ? (e) => handleDrop(e, category) : undefined}
+              >
                 <button
                   type="button"
                   onClick={() => toggleExpanded(category)}
                   className={`flex-1 flex items-center justify-between gap-2 px-2 py-2 rounded-sm text-left font-body text-sm transition-colors min-w-0 ${
                     isCategoryActive ? "text-accent" : "text-ink/85"
-                  } hover:bg-ink/[0.04]`}
+                  } hover:bg-ink/[0.04] ${isDraggable ? "cursor-grab active:cursor-grabbing" : ""}`}
                 >
                   <span className="flex items-center gap-1.5 min-w-0">
                     {isOpen ? (
@@ -388,6 +455,49 @@ export default function Sidebar({
           );
         })}
       </ul>
+
+      {pendingDropMerge && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Confirm category merge"
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+        >
+          <div
+            aria-hidden="true"
+            onClick={cancelDropMerge}
+            className="absolute inset-0 bg-ink/40"
+          />
+          <div className="relative bg-paper border border-rule rounded-sm shadow-xl w-full max-w-sm p-5">
+            <h3 className="font-display font-semibold text-ink text-base mb-2">
+              Merge categories?
+            </h3>
+            <p className="font-body text-sm text-ink/70 mb-5">
+              Do you want to merge{" "}
+              <span className="font-medium text-ink">"{pendingDropMerge.from}"</span> into{" "}
+              <span className="font-medium text-ink">"{pendingDropMerge.to}"</span>? Every
+              word in "{pendingDropMerge.from}" will move to "{pendingDropMerge.to}", and
+              "{pendingDropMerge.from}" will be removed.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={cancelDropMerge}
+                className="px-3 py-1.5 rounded-sm border border-rule text-sm text-ink/70 hover:border-ink/40 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDropMerge}
+                className="px-3 py-1.5 rounded-sm bg-accent text-paper text-sm font-medium hover:bg-accent/90 transition-colors"
+              >
+                Merge
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

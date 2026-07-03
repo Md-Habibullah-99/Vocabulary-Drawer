@@ -190,6 +190,21 @@ export function useFlashcards() {
     );
   }, []);
 
+  /**
+   * Patches a single card's editable fields (word, meaning, example,
+   * exampleMeaning, category, ...) by id. Used by the Word Manager in
+   * Settings so a learner can fix a typo without re-uploading their
+   * whole list. Only the keys present in `updates` are touched — every
+   * other field (id, statuses, etc.) is left exactly as-is. Persistence
+   * is automatic: this just calls setCards, and the effect above
+   * writes the new array to localStorage like any other card change.
+   */
+  const updateCard = useCallback((cardId, updates) => {
+    setCards((prev) =>
+      prev.map((card) => (card.id === cardId ? { ...card, ...updates } : card))
+    );
+  }, []);
+
   /** Updates a single settings flag (resetMeaningOnNavigation, etc). */
   const updateSetting = useCallback((key, value) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
@@ -303,6 +318,7 @@ export function useFlashcards() {
     restoreCards,
     checkForDuplicates,
     toggleTag,
+    updateCard,
     updateSetting,
     resetAll,
     mergeCategory,

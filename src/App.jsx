@@ -60,6 +60,7 @@ export default function App() {
     restoreCards,
     checkForDuplicates,
     toggleTag,
+    updateCard,
     updateSetting,
     resetAll,
     mergeCategory,
@@ -318,6 +319,7 @@ export default function App() {
         tags={tags}
         history={history}
         onClearHistory={clearHistory}
+        onUpdateCard={updateCard}
         onRestoreBackup={(restoredCards) => {
           setIsSettingsOpen(false);
           handleIncomingCards(restoredCards, "restore");
