@@ -13,6 +13,7 @@ import React from "react";
 import Sidebar from "./Sidebar";
 import Flashcard from "./Flashcard";
 import DeckControls from "./DeckControls";
+import { useSwipeGesture } from "../hooks/useSwipeGesture";
 
 export default function HomeView({
   isSidebarOpen,
@@ -36,6 +37,13 @@ export default function HomeView({
   onPrevious,
   onNext,
 }) {
+  // Feature: swipe left/right to navigate the deck on touch devices.
+  // Swipe left (finger moves right-to-left) -> next word, mirroring
+  // DeckControls' "Next" button; swipe right -> previous word. The ref
+  // is attached to the <main> below, so a swipe anywhere over the
+  // flashcard + controls area triggers it, not just on the card itself.
+  const swipeRef = useSwipeGesture({ onSwipeLeft: onNext, onSwipeRight: onPrevious });
+
   return (
     <div className="relative flex flex-1 min-h-0 flex-col md:flex-row md:overflow-hidden">
       {isSidebarOpen && (
@@ -61,7 +69,11 @@ export default function HomeView({
         onRequestClose={onRequestCloseSidebar}
       />
 
-      <main className="flex-1 min-h-0 flex items-center justify-center px-6 py-10 md:overflow-hidden">
+      <main
+        ref={swipeRef}
+        className="flex-1 min-h-0 flex items-center justify-center px-6 py-10 md:overflow-hidden"
+        style={{ touchAction: "pan-y" }}
+      >
         <div className="w-full max-w-md">
           <Flashcard
             card={currentCard}

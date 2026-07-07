@@ -36,7 +36,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from "react";
-import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation, Link } from "react-router-dom";
 import { Menu, Settings as SettingsIcon, Plus, FolderCog } from "lucide-react";
 
 import HomeView from "./components/HomeView";
@@ -73,6 +73,8 @@ export default function App() {
     addCard,
     moveCardToCategory,
     mergeCategory,
+    deleteCategoryCards,
+    deleteCard,
     addCustomTag,
     renameTag,
     deleteCustomTag,
@@ -221,9 +223,11 @@ export default function App() {
               <Menu size={16} />
             </button>
           )}
-          <span className="font-display font-semibold text-lg text-ink">
-            Vocabulary Drawer
-          </span>
+          <Link to="/">
+            <span className="font-display font-semibold text-lg text-ink">
+              Vocabulary Drawer
+            </span>
+          </Link>
         </div>
         <div className="flex items-center gap-2">
           {!isAddWordsRoute && !showDuplicateReview && (
@@ -318,6 +322,8 @@ export default function App() {
                 onUpdateCard={updateCard}
                 onMoveCardToCategory={moveCardToCategory}
                 onMergeCategory={mergeCategory}
+                onDeleteCategoryCards={deleteCategoryCards}
+                onDeleteCard={deleteCard}
               />
             }
           />

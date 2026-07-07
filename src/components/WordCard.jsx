@@ -16,17 +16,38 @@
  * the pattern already used for category-level dragging in Sidebar.jsx
  * — no new drag-and-drop library needed for this.
  *
+ * Three-dot menu: each card also has its own MoreVertical menu — the
+ * exact same pattern as the category header's three-dot menu in
+ * ManagePage.jsx (button toggles an absolute-positioned dropdown;
+ * a destructive action is never wired straight to the menu item, it
+ * opens a confirmation modal instead). Currently offers just "Delete",
+ * since renaming a word's fields is already handled by the inline
+ * EditableField click-to-edit below — there's no separate "rename"
+ * action needed the way there is for a whole category.
+ *
  * Props:
  *  - card: { id, word, meaning, example, exampleMeaning, category, statuses }
  *  - onUpdateCard: (cardId, updates) => void
+ *  - onDeleteCard: (cardId) => void
  *  - isDragging: boolean — true while THIS card is the one being dragged
  *  - onDragStart / onDragEnd: (e, cardId) => void / () => void
  */
-import React from "react";
-import { GripVertical } from "lucide-react";
+import React, { useState } from "react";
+import { GripVertical, MoreVertical, Trash2 } from "lucide-react";
 import { EditableField, FIELDS } from "./WordManager";
+import DeleteWordModal from "./DeleteWordModal";
 
-export default function WordCard({ card, onUpdateCard, isDragging, onDragStart, onDragEnd }) {
+export default function WordCard({
+  card,
+  onUpdateCard,
+  onDeleteCard,
+  isDragging,
+  onDragStart,
+  onDragEnd,
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
   return (
     <li
       draggable
@@ -45,7 +66,37 @@ export default function WordCard({ card, onUpdateCard, isDragging, onDragStart, 
           <GripVertical size={14} />
         </span>
         <span className="font-mono text-[10px] text-ink/35 truncate">{card.category}</span>
+
+        <div className="relative flex-shrink-0 ml-auto">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((prev) => !prev)}
+            aria-label={`Manage "${card.word || "word"}"`}
+            aria-haspopup="true"
+            aria-expanded={menuOpen}
+            className="p-1 rounded-sm text-ink/40 hover:text-ink/70 hover:bg-ink/[0.04]"
+          >
+            <MoreVertical size={14} />
+          </button>
+
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1 z-20 bg-paper border border-rule rounded-sm shadow-md py-1 w-36">
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  setConfirmingDelete(true);
+                }}
+                className="w-full text-left px-3 py-1.5 text-[13px] text-accent hover:bg-accent/5 flex items-center gap-2"
+              >
+                <Trash2 size={12} />
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
       </div>
+
       {FIELDS.map(({ key, label, placeholder }) => (
         <EditableField
           key={key}
@@ -59,6 +110,15 @@ export default function WordCard({ card, onUpdateCard, isDragging, onDragStart, 
           }}
         />
       ))}
+
+      <DeleteWordModal
+        pendingDelete={confirmingDelete ? { word: card.word, meaning: card.meaning } : null}
+        onConfirm={() => {
+          setConfirmingDelete(false);
+          onDeleteCard(card.id);
+        }}
+        onCancel={() => setConfirmingDelete(false)}
+      />
     </li>
   );
 }

@@ -310,6 +310,31 @@ export function useFlashcards() {
     setCards((prev) => mergeCategories(prev, fromCategory, toCategory));
   }, []);
 
+  /**
+   * PERMANENTLY deletes every card filed under `category`. This is the
+   * "delete the words entirely" branch of ManagePage's category
+   * delete-confirmation modal — the other branch ("move words into
+   * Default/Unassigned") doesn't need a new action at all, since that's
+   * just mergeCategory(category, "General") reusing the rewrite above.
+   * "All Words" can't be deleted (it isn't a real category).
+   */
+  const deleteCategoryCards = useCallback((category) => {
+    if (category === ALL_WORDS_CATEGORY) return;
+    setCards((prev) => prev.filter((c) => c.category !== category));
+  }, []);
+
+  /**
+   * PERMANENTLY deletes a single card by id — the per-card counterpart
+   * to deleteCategoryCards above (which deletes every card in a whole
+   * category at once). Used by WordCard's three-dot menu on the
+   * management page, mirroring the category header's three-dot menu:
+   * a destructive action gated behind its own confirmation modal
+   * (DeleteWordModal) rather than firing on click.
+   */
+  const deleteCard = useCallback((cardId) => {
+    setCards((prev) => prev.filter((c) => c.id !== cardId));
+  }, []);
+
   // ---- Tag (sub-category) management ----------------------------------
 
   /** Adds a new custom tag. Ids are slugified from the label to stay readable in storage. */
@@ -373,6 +398,8 @@ export function useFlashcards() {
     addCard,
     moveCardToCategory,
     mergeCategory,
+    deleteCategoryCards,
+    deleteCard,
     addCustomTag,
     renameTag,
     deleteCustomTag,
