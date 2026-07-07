@@ -248,6 +248,55 @@ export function useFlashcards() {
     setHistory([]);
   }, []);
 
+  /**
+   * Adds a single new card from the management page's "add word" form.
+   * Mirrors addCards' id-collision handling (see above) but for exactly
+   * one card, so a learner can add one word at a time without going
+   * through the bulk text-import flow. `category` defaults to "General"
+   * when left blank so the card always has somewhere to live.
+   *
+   * @param {{word: string, meaning: string, example?: string, exampleMeaning?: string, category?: string}} cardData
+   */
+  const addCard = useCallback((cardData) => {
+    setCards((prev) => {
+      const existingIds = new Set(prev.map((c) => c.id));
+      let counter = prev.length;
+      let id = `card-${String(counter).padStart(4, "0")}`;
+      while (existingIds.has(id)) {
+        counter += 1;
+        id = `card-${String(counter).padStart(4, "0")}`;
+      }
+      const newCard = {
+        id,
+        word: (cardData.word || "").trim(),
+        meaning: (cardData.meaning || "").trim(),
+        example: (cardData.example || "").trim(),
+        exampleMeaning: (cardData.exampleMeaning || "").trim(),
+        category: (cardData.category || "").trim() || "General",
+        statuses: [],
+      };
+      return [...prev, newCard];
+    });
+  }, []);
+
+  /**
+   * Moves a single card into a different category by id — the
+   * per-card counterpart to mergeCategory below (which moves every
+   * card in a whole category at once). Used by the inter-category
+   * drag-and-drop on the management page. Immutable: only the moved
+   * card's object is replaced, everything else in `cards` keeps
+   * referential identity.
+   */
+  const moveCardToCategory = useCallback((cardId, newCategory) => {
+    const trimmed = (newCategory || "").trim();
+    if (!trimmed) return;
+    setCards((prev) =>
+      prev.map((card) =>
+        card.id === cardId ? { ...card, category: trimmed } : card
+      )
+    );
+  }, []);
+
   // ---- Category management -------------------------------------------
 
   /**
@@ -321,6 +370,8 @@ export function useFlashcards() {
     updateCard,
     updateSetting,
     resetAll,
+    addCard,
+    moveCardToCategory,
     mergeCategory,
     addCustomTag,
     renameTag,

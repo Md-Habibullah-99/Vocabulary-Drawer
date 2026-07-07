@@ -46,6 +46,8 @@ import {
   X,
 } from "lucide-react";
 import { tagLabel, ALL_WORDS_CATEGORY, UNREAD_TAG_ID } from "../utils/categoryTree";
+import { useCategoryMergeDrag } from "../hooks/useCategoryMergeDrag";
+import MergeConfirmModal from "./MergeConfirmModal";
 
 export default function Sidebar({
   categories,
@@ -76,50 +78,20 @@ export default function Sidebar({
   // Dragging category A onto category B asks "merge A into B?" via a
   // confirmation modal rather than merging immediately on drop — a drop
   // is easy to trigger by accident, and this action deletes a category.
-  const [draggingCategory, setDraggingCategory] = useState(null);
-  const [dragOverCategory, setDragOverCategory] = useState(null);
-  const [pendingDropMerge, setPendingDropMerge] = useState(null); // { from, to }
-
-  const handleDragStart = (e, category) => {
-    setDraggingCategory(category);
-    e.dataTransfer.effectAllowed = "move";
-    // Some browsers require data to be set for drag to register at all.
-    e.dataTransfer.setData("text/plain", category);
-  };
-
-  const handleDragEnd = () => {
-    setDraggingCategory(null);
-    setDragOverCategory(null);
-  };
-
-  const handleDragOver = (e, category) => {
-    if (!draggingCategory || draggingCategory === category) return;
-    e.preventDefault(); // required to allow a drop
-    e.dataTransfer.dropEffect = "move";
-    if (dragOverCategory !== category) setDragOverCategory(category);
-  };
-
-  const handleDragLeave = (category) => {
-    setDragOverCategory((prev) => (prev === category ? null : prev));
-  };
-
-  const handleDrop = (e, targetCategory) => {
-    e.preventDefault();
-    const source = draggingCategory;
-    setDraggingCategory(null);
-    setDragOverCategory(null);
-    if (!source || source === targetCategory) return;
-    setPendingDropMerge({ from: source, to: targetCategory });
-  };
-
-  const confirmDropMerge = () => {
-    if (pendingDropMerge) {
-      onMergeCategory(pendingDropMerge.from, pendingDropMerge.to);
-    }
-    setPendingDropMerge(null);
-  };
-
-  const cancelDropMerge = () => setPendingDropMerge(null);
+  // Shared with ManagePage.jsx via useCategoryMergeDrag so both places
+  // that support this interaction stay in lockstep.
+  const {
+    draggingCategory,
+    dragOverCategory,
+    pendingDropMerge,
+    handleDragStart,
+    handleDragEnd,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+    confirmDropMerge,
+    cancelDropMerge,
+  } = useCategoryMergeDrag(onMergeCategory);
 
   const toggleExpanded = (category) => {
     setExpanded((prev) => ({ ...prev, [category]: !prev[category] }));
@@ -456,48 +428,18 @@ export default function Sidebar({
         })}
       </ul>
 
-      {pendingDropMerge && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Confirm category merge"
-          className="fixed inset-0 z-50 flex items-center justify-center px-4"
-        >
-          <div
-            aria-hidden="true"
-            onClick={cancelDropMerge}
-            className="absolute inset-0 bg-ink/40"
-          />
-          <div className="relative bg-paper border border-rule rounded-sm shadow-xl w-full max-w-sm p-5">
-            <h3 className="font-display font-semibold text-ink text-base mb-2">
-              Merge categories?
-            </h3>
-            <p className="font-body text-sm text-ink/70 mb-5">
-              Do you want to merge{" "}
-              <span className="font-medium text-ink">"{pendingDropMerge.from}"</span> into{" "}
-              <span className="font-medium text-ink">"{pendingDropMerge.to}"</span>? Every
-              word in "{pendingDropMerge.from}" will move to "{pendingDropMerge.to}", and
-              "{pendingDropMerge.from}" will be removed.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={cancelDropMerge}
-                className="px-3 py-1.5 rounded-sm border border-rule text-sm text-ink/70 hover:border-ink/40 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmDropMerge}
-                className="px-3 py-1.5 rounded-sm bg-accent text-paper text-sm font-medium hover:bg-accent/90 transition-colors"
-              >
-                Merge
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Rendered via a portal to document.body — this <nav> is both
+          scrollable AND carries Tailwind's `transform` class for the
+          mobile slide-in animation, and a `transform` ancestor becomes
+          the containing block for `position: fixed` descendants. Left
+          inline, this modal would be "fixed" to the nav's scroll box
+          instead of the viewport (the bug this component was pulled
+          out to fix — see MergeConfirmModal.jsx for the full writeup). */}
+      <MergeConfirmModal
+        pendingMerge={pendingDropMerge}
+        onConfirm={confirmDropMerge}
+        onCancel={cancelDropMerge}
+      />
     </nav>
   );
 }

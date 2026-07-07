@@ -25,7 +25,7 @@
 import React, { useState, useMemo } from "react";
 import { Search } from "lucide-react";
 
-const FIELDS = [
+export const FIELDS = [
   { key: "word", label: "Word", placeholder: "Word" },
   { key: "meaning", label: "Meaning", placeholder: "Meaning" },
   { key: "example", label: "Example", placeholder: "Example sentence" },
@@ -102,9 +102,11 @@ function WordManagerRow({ card, onUpdateCard }) {
 /**
  * A single click-to-edit field. Renders as static text until clicked,
  * then swaps to a text input; blur or Enter commits, Escape reverts
- * without calling onCommit.
+ * without calling onCommit. Exported so WordCard.jsx (the management
+ * page's draggable card row) can reuse the exact same editing pattern
+ * instead of a second copy of it.
  */
-function EditableField({ label, placeholder, value, onCommit }) {
+export function EditableField({ label, placeholder, value, onCommit }) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState(value);
 

@@ -18,6 +18,12 @@
  *                 a learner who opened it by mistake (or just changed
  *                 their mind) can always get back to "/" without
  *                 getting stuck — see ImportPanel's onCancel prop.
+ *  "/manage"    — ManagePage: add a single word via a dedicated form,
+ *                 drag a word onto a different category to move just
+ *                 that card, or drag a category's header onto another
+ *                 category to merge them (same interaction as the
+ *                 Sidebar, via useCategoryMergeDrag). Available even
+ *                 with zero existing cards, unlike "/".
  *
  * DuplicateReviewPanel and SettingsPanel are NOT routes: they're
  * transient overlays that can appear regardless of which route is
@@ -31,12 +37,13 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { Menu, Settings as SettingsIcon, Plus } from "lucide-react";
+import { Menu, Settings as SettingsIcon, Plus, FolderCog } from "lucide-react";
 
 import HomeView from "./components/HomeView";
 import SettingsPanel from "./components/SettingsPanel";
 import ImportPanel from "./components/ImportPanel";
 import DuplicateReviewPanel from "./components/DuplicateReviewPanel";
+import ManagePage from "./components/ManagePage";
 
 import { useFlashcards } from "./hooks/useFlashcards";
 import { useDeckNavigation } from "./hooks/useDeckNavigation";
@@ -63,6 +70,8 @@ export default function App() {
     updateCard,
     updateSetting,
     resetAll,
+    addCard,
+    moveCardToCategory,
     mergeCategory,
     addCustomTag,
     renameTag,
@@ -76,6 +85,7 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const isAddWordsRoute = location.pathname === "/add-words";
+  const isManageRoute = location.pathname === "/manage";
   const isHomeRoute = location.pathname === "/";
 
   const [activeCategory, setActiveCategory] = useState(ALL_WORDS_CATEGORY);
@@ -193,7 +203,7 @@ export default function App() {
     onFlip: toggleReveal,
     onNext: goNext,
     onPrevious: goPrevious,
-    enabled: !isAddWordsRoute && !showDuplicateReview && !isSettingsOpen,
+    enabled: !isAddWordsRoute && !isManageRoute && !showDuplicateReview && !isSettingsOpen,
   });
 
   return (
@@ -224,6 +234,16 @@ export default function App() {
             >
               <Plus size={15} />
               Add words
+            </button>
+          )}
+          {!isManageRoute && !showDuplicateReview && (
+            <button
+              type="button"
+              onClick={() => navigate("/manage")}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-sm border border-rule text-ink/70 text-sm hover:border-ink/40 transition-colors"
+            >
+              <FolderCog size={15} />
+              Manage
             </button>
           )}
           <button
@@ -287,6 +307,18 @@ export default function App() {
                   onCancel={hasExistingCards ? () => navigate("/") : null}
                 />
               </div>
+            }
+          />
+          <Route
+            path="/manage"
+            element={
+              <ManagePage
+                cards={cards}
+                onAddCard={addCard}
+                onUpdateCard={updateCard}
+                onMoveCardToCategory={moveCardToCategory}
+                onMergeCategory={mergeCategory}
+              />
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />
