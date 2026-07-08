@@ -297,6 +297,36 @@ export function useFlashcards() {
     );
   }, []);
 
+  /**
+   * Duplicates a single card into `newCategory` — the "Copy" counterpart
+   * to moveCardToCategory above (which relocates a card instead of
+   * cloning it). Every field is carried over verbatim (word, meaning,
+   * example, exampleMeaning, statuses, ...) except `id` and `category`,
+   * so the result is an exact duplicate the learner can edit into a new
+   * word later, per the management page's "Copy" action. Mirrors
+   * addCard's id-collision handling so the new id never clashes with
+   * an existing one.
+   */
+  const copyCard = useCallback((cardId, newCategory) => {
+    const trimmed = (newCategory || "").trim();
+    if (!trimmed) return;
+    setCards((prev) => {
+      const original = prev.find((c) => c.id === cardId);
+      if (!original) return prev;
+
+      const existingIds = new Set(prev.map((c) => c.id));
+      let counter = prev.length;
+      let id = `card-${String(counter).padStart(4, "0")}`;
+      while (existingIds.has(id)) {
+        counter += 1;
+        id = `card-${String(counter).padStart(4, "0")}`;
+      }
+
+      const duplicate = { ...original, id, category: trimmed };
+      return [...prev, duplicate];
+    });
+  }, []);
+
   // ---- Category management -------------------------------------------
 
   /**
@@ -397,6 +427,7 @@ export function useFlashcards() {
     resetAll,
     addCard,
     moveCardToCategory,
+    copyCard,
     mergeCategory,
     deleteCategoryCards,
     deleteCard,

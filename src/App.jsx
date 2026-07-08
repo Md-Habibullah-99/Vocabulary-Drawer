@@ -72,6 +72,7 @@ export default function App() {
     resetAll,
     addCard,
     moveCardToCategory,
+    copyCard,
     mergeCategory,
     deleteCategoryCards,
     deleteCard,
@@ -321,6 +322,7 @@ export default function App() {
                 onAddCard={addCard}
                 onUpdateCard={updateCard}
                 onMoveCardToCategory={moveCardToCategory}
+                onCopyCard={copyCard}
                 onMergeCategory={mergeCategory}
                 onDeleteCategoryCards={deleteCategoryCards}
                 onDeleteCard={deleteCard}

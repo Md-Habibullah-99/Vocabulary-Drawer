@@ -40,6 +40,8 @@
  *  - onAddCard: (cardData) => void
  *  - onUpdateCard: (cardId, updates) => void
  *  - onMoveCardToCategory: (cardId, newCategory) => void
+ *  - onCopyCard: (cardId, newCategory) => void — duplicates a card into
+ *    another category; see WordCard.jsx's "Copy" menu item
  *  - onMergeCategory: (fromCategory, toCategory) => void
  *  - onDeleteCategoryCards: (category) => void
  *  - onDeleteCard: (cardId) => void
@@ -67,6 +69,7 @@ export default function ManagePage({
   onAddCard,
   onUpdateCard,
   onMoveCardToCategory,
+  onCopyCard,
   onMergeCategory,
   onDeleteCategoryCards,
   onDeleteCard,
@@ -381,8 +384,11 @@ export default function ManagePage({
                           <WordCard
                             key={card.id}
                             card={card}
+                            categories={categories}
                             onUpdateCard={onUpdateCard}
                             onDeleteCard={onDeleteCard}
+                            onMoveToCategory={onMoveCardToCategory}
+                            onCopyCard={onCopyCard}
                             isDragging={draggingCardId === card.id}
                             onDragStart={handleCardDragStart}
                             onDragEnd={handleCardDragEnd}
