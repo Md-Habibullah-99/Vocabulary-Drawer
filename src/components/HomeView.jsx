@@ -88,7 +88,7 @@ export default function HomeView({
             onPrevious={onPrevious}
             onNext={onNext}
           />
-          <p className="text-center font-mono text-[11px] text-ink/30 mt-3">
+          <p className="hidden lg:block text-center font-mono text-[11px] text-ink/30 mt-3">
             Space to flip &middot; ← → to navigate
           </p>
         </div>
